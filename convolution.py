@@ -68,7 +68,7 @@ for m in range(nfile):
             continue
         else:
             lab = lab + i
-    print(lab)
+
     ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab+" K")
 
     if len(sys.argv[:]) > 4+nfile:
