@@ -10,10 +10,13 @@ import sys
 
 
 nfile = int(sys.argv[1])
+labcond = sys.argv[-3]
 amp = float(sys.argv[-2])
 png_name = sys.argv[-1]
 
-if len(sys.argv[:]) > 4+nfile:
+r=5
+
+if len(sys.argv[:]) > r+nfile:
     globalmin = float(sys.argv[-4])
     globalmax = float(sys.argv[-3])
 
@@ -60,18 +63,39 @@ for m in range(nfile):
     convoluted = convoluted/np.max(convoluted)*np.max(data[:,4])
 
     ax1.plot(x[1,:],convoluted,alpha=1)
-    lab="T = "
-    for i in sys.argv[m+2]:
-        if i == "/":
-            break
-        elif i == "T":
-            continue
-        else:
-            lab = lab + i
+    
+    if labcond == "Temp":
+        lab="T = "
+        for i in sys.argv[m+2]:
+            if i == "/":
+                break
+            elif i == "T":
+                continue
+            else:
+                lab = lab + i
+        ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab+" K")
+    else:
+        lab=""
+        check = False
+        for i in sys.argv[m+2]:
+            if i == "/":
+                check = True
+                continue
+            if check:
+                if i == ".":
+                    check = False
+                    continue
+                if i != "_":
+                    lab = lab+i
+                else:
+                    lab = lab + "->"
+            else:
+                continue
+        ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab)
+        
+    print(lab)
 
-    ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab+" K")
-
-    if len(sys.argv[:]) > 4+nfile:
+    if len(sys.argv[:]) > r+nfile:
         ax1.set_xlim(globalmin,globalmax)
 
 ax1.tick_params(axis='both', which='major', labelsize=30)
