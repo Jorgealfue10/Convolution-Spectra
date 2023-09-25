@@ -17,8 +17,8 @@ png_name = sys.argv[-1]
 r=5
 
 if len(sys.argv[:]) > r+nfile:
-    globalmin = float(sys.argv[-4])
-    globalmax = float(sys.argv[-3])
+    globalmin = float(sys.argv[-5])
+    globalmax = float(sys.argv[-4])
 
 
 
