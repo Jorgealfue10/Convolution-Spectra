@@ -49,18 +49,6 @@ for m in range(nfile):
                 x[i,j] = j
             y[i,j] = lorentzian(x[i,j], amp, x0)/maxintens*data[i,4]
 
-    # if globalmin is None:
-    #     globalmin = emin
-    # else:
-    #     if globalmin > emin:
-    #         globalmin = emin
-
-    # if globalmax is None:
-    #     globalmax = emax
-    # else:
-    #     if globalmax < emax:
-    #         globalmax = emax
-
     x = x+emin-100
 
     funct = np.zeros((npoints))
@@ -72,7 +60,16 @@ for m in range(nfile):
     convoluted = convoluted/np.max(convoluted)*np.max(data[:,4])
 
     ax1.plot(x[1,:],convoluted,alpha=1)
-    ax1.fill_between(x[1,:],0,convoluted,alpha=0.2)
+    lab="T = "
+    for i in sys.argv[m+2]:
+        if i == "/":
+            break
+        elif i == "T":
+            continue
+        else:
+            lab = lab + i
+    print(lab)
+    ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab+" K")
 
     if len(sys.argv[:]) > 4+nfile:
         ax1.set_xlim(globalmin,globalmax)
@@ -80,5 +77,7 @@ for m in range(nfile):
 ax1.tick_params(axis='both', which='major', labelsize=30)
 ax1.set_xlabel(r" $\nu$ ($cm^{-1}$)",fontsize=30)
 ax1.set_ylabel(r" I (a.u.)",fontsize=30)
+
+ax1.legend(fontsize=30)
 
 fig1.savefig(png_name+".png",dpi=300,transparent=True)
