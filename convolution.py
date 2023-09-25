@@ -102,4 +102,6 @@ ax1.set_ylabel(r" I (a.u.)",fontsize=30)
 
 ax1.legend(fontsize=30,frameon=False)
 
+fig1.tight_layout()
+
 fig1.savefig(png_name+".png",dpi=300,transparent=True)
