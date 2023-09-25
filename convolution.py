@@ -93,8 +93,6 @@ for m in range(nfile):
                 continue
         ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab)
         
-    print(lab)
-
     if len(sys.argv[:]) > r+nfile:
         ax1.set_xlim(globalmin,globalmax)
 
