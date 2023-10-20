@@ -98,13 +98,13 @@ for m in range(nfile):
         ax1.set_xlim(globalmin,globalmax)
 
     if rots == "yes":
-        ax1.vlines(data[:,2],0,data[:,4])
+        ax1.vlines(data[:,2],0,data[:,4],color="black")
         for i in range(len(data[:,0])):
             if data[i,4] > 0.1e-20: #np.max(data[i,4])/100:
                 if data[i,0] != data[i,1]:
-                   ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-8,data[i,4]+0.5e-21),rotation=90,fontsize=15)
+                   ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-1,data[i,4]+0.8e-22),rotation=90,fontsize=10)
                 if data[i,0] == data[i,1] and data[i,1] == 0.5:
-                   ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-8,data[i,4]+0.5e-21),rotation=90,fontsize=15)
+                   ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-1,data[i,4]+1.6e-21),rotation=90,fontsize=10)
 
 ax1.tick_params(axis='both', which='major', labelsize=30)
 ax1.set_xlabel(r" $\nu$ ($cm^{-1}$)",fontsize=30)
