@@ -1,117 +1,111 @@
+import argparse
 import numpy as np
-from astropy.modeling import models
-import astropy.units as u
-from specutils import Spectrum1D, SpectralRegion
-from specutils.fitting import fit_lines
 import matplotlib.pyplot as plt
-from astropy.convolution import Gaussian1DKernel
-from astropy.convolution import convolve
-import sys
-
-
-nfile = int(sys.argv[1])
-rots = sys.argv[-4]
-labcond = sys.argv[-3]
-amp = float(sys.argv[-2])
-png_name = sys.argv[-1]
-
-r=6
-
-if len(sys.argv[:]) > r+nfile:
-    globalmin = float(sys.argv[-6])
-    globalmax = float(sys.argv[-5])
-
+from astropy.convolution import Gaussian1DKernel, convolve
 
 
 def lorentzian(x, a, x0):
-    return 1/(np.pi)*((1/2*a)/((x-x0)**2+(1/2*a)**2))
+    return (1 / np.pi) * ((0.5 * a) / ((x - x0) ** 2 + (0.5 * a) ** 2))
 
-std=1.5
 
-fig1,ax1 = plt.subplots(figsize=(10,10))
+def extract_label(filepath, mode):
+    if mode == "Temp":
+        label = "T = "
+        for char in filepath:
+            if char == "/":
+                break
+            elif char != "T":
+                label += char
+        return f"{label} K"
+    else:
+        label = ""
+        inside = False
+        for char in filepath:
+            if char == "/":
+                inside = True
+                continue
+            if inside:
+                if char == ".":
+                    break
+                label += "->" if char == "_" else char
+        return label
 
-for m in range(nfile):
-    data = np.loadtxt("./"+sys.argv[m+2])
 
-    emin = np.min(data[:,2])
-    emax = np.max(data[:,2])
-
-    npoints = int((emax+500)-(emin-500))
+def process_spectrum(data, amp, stddev):
+    emin, emax = np.min(data[:, 2]), np.max(data[:, 2])
+    npoints = int((emax + 500) - (emin - 500))
     x = np.zeros((data.shape[0], npoints))
     y = np.zeros((data.shape[0], npoints))
+    shifted = data[:, 2] - emin + 100
 
-    falsedat = data[:,2]-emin+100
+    for i, x0 in enumerate(shifted):
+        max_intensity = lorentzian(x0, amp, x0)
+        for j in range(npoints):
+            x[i, j] = j if abs(j - x0) >= 0.1 else x0
+            y[i, j] = lorentzian(x[i, j], amp, x0) / max_intensity * data[i, 4]
 
-    for i in range(falsedat.shape[0]):
-        x0 = falsedat[i]
-        maxintens = lorentzian(x0,amp,x0)
-        for j in range(0,npoints):
-            diff = abs(j-x0)
-            if diff < 0.1:
-                x[i,j] = x0
-            else:
-                x[i,j] = j
-            y[i,j] = lorentzian(x[i,j], amp, x0)/maxintens*data[i,4]
+    x += emin - 100
+    max_y = np.max(y, axis=0)
+    kernel = Gaussian1DKernel(stddev=stddev)
+    convoluted = convolve(max_y, kernel, normalize_kernel=True, boundary='extend')
+    return x[1], convoluted / np.max(convoluted) * np.max(data[:, 4])
 
-    x = x+emin-100
 
-    funct = np.zeros((npoints))
-    for i in range(npoints):
-        funct[i] = np.max(y[:,i])
+def plot_spectra(files, rots, label_mode, amp, output, stddev, xlim=None):
+    fig, ax = plt.subplots(figsize=(10, 10))
 
-    kernel = Gaussian1DKernel(stddev=std)
-    convoluted = convolve(funct,kernel,normalize_kernel=True,boundary='extend')
-    convoluted = convoluted/np.max(convoluted)*np.max(data[:,4])
+    for filepath in files:
+        data = np.loadtxt(filepath)
+        x_vals, y_vals = process_spectrum(data, amp, stddev)
 
-    ax1.plot(x[1,:],convoluted,alpha=1)
-    
-    if labcond == "Temp":
-        lab="T = "
-        for i in sys.argv[m+2]:
-            if i == "/":
-                break
-            elif i == "T":
-                continue
-            else:
-                lab = lab + i
-        ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab+" K")
-    else:
-        lab=""
-        check = False
-        for i in sys.argv[m+2]:
-            if i == "/":
-                check = True
-                continue
-            if check:
-                if i == ".":
-                    check = False
-                    continue
-                if i != "_":
-                    lab = lab+i
-                else:
-                    lab = lab + "->"
-            else:
-                continue
-        ax1.fill_between(x[1,:],0,convoluted,alpha=0.2,label=lab)
-        
-    if len(sys.argv[:]) > r+nfile:
-        ax1.set_xlim(globalmin,globalmax)
+        ax.plot(x_vals, y_vals, alpha=1)
+        label = extract_label(filepath, label_mode)
+        ax.fill_between(x_vals, 0, y_vals, alpha=0.2, label=label)
 
-    if rots == "yes":
-        ax1.vlines(data[:,2],0,data[:,4],color="black")
-        for i in range(len(data[:,0])):
-            if data[i,4] > 0.1e-20: #np.max(data[i,4])/100:
-                if data[i,0] != data[i,1]:
-                   ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-8,data[i,4]+0.8e-22),rotation=90,fontsize=10)
-#               if data[i,0] == data[i,1] and data[i,1] == 0.5:
-#                  ax1.annotate(str(data[i,1])+r"->"+str(data[i,0]),xy=(data[i,2]-1,data[i,4]+1.6e-21),rotation=90,fontsize=10)
+        if xlim:
+            ax.set_xlim(*xlim)
 
-ax1.tick_params(axis='both', which='major', labelsize=30)
-ax1.set_xlabel(r" $\nu$ ($cm^{-1}$)",fontsize=30)
-ax1.set_ylabel(r" I (cm/mol)",fontsize=30)
+        if rots:
+            ax.vlines(data[:, 2], 0, data[:, 4], color="black")
+            for i in range(len(data)):
+                if data[i, 4] > 0.1e-20 and data[i, 0] != data[i, 1]:
+                    ax.annotate(f"{int(data[i, 1])}->{int(data[i, 0])}",
+                                xy=(data[i, 2] - 8, data[i, 4] + 0.8e-22),
+                                rotation=90, fontsize=10)
 
-ax1.legend(fontsize=30,frameon=False)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    ax.set_xlabel(r"$\nu$ ($cm^{-1}$)", fontsize=30)
+    ax.set_ylabel(r"$I$ (cm/mol)", fontsize=30)
+    ax.legend(fontsize=30, frameon=False)
+    fig.tight_layout()
+    fig.savefig(f"{output}.png", dpi=300, transparent=True)
 
-fig1.tight_layout()
 
-fig1.savefig(png_name+".png",dpi=300,transparent=True)
+def main():
+    parser = argparse.ArgumentParser(
+        description="Procesa y grafica espectros con convolución Gaussiana + picos Lorentzianos."
+    )
+    parser.add_argument("files", nargs="+", help="Lista de archivos de datos")
+    parser.add_argument("--rots", action="store_true", help="Mostrar transiciones rotacionales")
+    parser.add_argument("--label", choices=["Temp", "Trans"], default="Trans", help="Tipo de etiquetas en las curvas")
+    parser.add_argument("--amp", type=float, required=True, help="Ancho del pico Lorentziano")
+    parser.add_argument("--output", required=True, help="Nombre base del archivo PNG de salida")
+    parser.add_argument("--stddev", type=float, default=1.5, help="Desviación estándar del suavizado Gaussiano")
+    parser.add_argument("--xlim", nargs=2, type=float, metavar=('XMIN', 'XMAX'),
+                        help="Límites del eje x (min max)")
+
+    args = parser.parse_args()
+
+    plot_spectra(
+        files=args.files,
+        rots=args.rots,
+        label_mode=args.label,
+        amp=args.amp,
+        output=args.output,
+        stddev=args.stddev,
+        xlim=tuple(args.xlim) if args.xlim else None
+    )
+
+
+if __name__ == "__main__":
+    main()
