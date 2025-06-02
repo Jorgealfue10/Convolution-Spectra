@@ -69,7 +69,7 @@ def plot_spectra(files, rots, label_mode, amp, output, stddev, xlim=None):
             ax.vlines(data[:, 2], 0, data[:, 4], color="black")
             for i in range(len(data)):
                 if data[i, 4] > 0.1e-20 and data[i, 0] != data[i, 1]:
-                    ax.annotate(f"{int(data[i, 1])}$\rightarrow${int(data[i, 0])}",
+                    ax.annotate(f"{int(data[i, 1])}->{int(data[i, 0])}",
                                 xy=(data[i, 2] - 8, data[i, 4] + 0.8e-22),
                                 rotation=90, fontsize=10)
 
